@@ -341,64 +341,101 @@
   }
 
   /* ---------------- 触摸交互 ---------------- */
-  var downInfo = null;
+  var downInfo = null;      // 当前按下的指针 {x, y, sq, pid}
+  var winListenersOn = false;
 
-  function onDown(e) {
-    if (e.target !== canvas) return;
-    e.preventDefault();
-    Sound.unlock();
-    if (!inStage(e.clientX, e.clientY)) return;
-    var p = stageXY(e.clientX, e.clientY);
-    var sq = s2l(p.x, p.y);
-    if (sq === null) return;
-    downInfo = { x: e.clientX, y: e.clientY, sq: sq, moved: false, dragging: false };
-    canvas.setPointerCapture(e.pointerId);
+  function addWinListeners() {
+    if (winListenersOn) return;
+    winListenersOn = true;
+    window.addEventListener('pointermove', onMove, { passive: false });
+    window.addEventListener('pointerup', onUp, { passive: false });
+    window.addEventListener('pointercancel', onUp, { passive: false });
+    // 兜底：个别浏览器（如部分荣耀/华为版本）指针事件行为异常时，走触摸事件通道
+    window.addEventListener('touchmove', onTouch, { passive: false });
+    window.addEventListener('touchend', onTouch, { passive: false });
+    window.addEventListener('touchcancel', onTouch, { passive: false });
+  }
+  function removeWinListeners() {
+    if (!winListenersOn) return;
+    winListenersOn = false;
+    window.removeEventListener('pointermove', onMove);
+    window.removeEventListener('pointerup', onUp);
+    window.removeEventListener('pointercancel', onUp);
+    window.removeEventListener('touchmove', onTouch);
+    window.removeEventListener('touchend', onTouch);
+    window.removeEventListener('touchcancel', onTouch);
   }
 
-  function onMove(e) {
-    if (!downInfo || e.target !== canvas) return;
+  function trackStart(clientX, clientY, pointerId) {
+    window.__tapCount = (window.__tapCount || 0) + 1;
+    Sound.unlock();
+    var p = stageXY(clientX, clientY);
+    var sq = s2l(p.x, p.y);
+    if (sq === null) return false;
+    downInfo = { x: clientX, y: clientY, sq: sq, pid: pointerId == null ? null : pointerId };
+    if (downInfo.pid !== null && canvas.setPointerCapture) {
+      try { canvas.setPointerCapture(downInfo.pid); } catch (err) {}
+    }
+    addWinListeners();
+    return true;
+  }
+
+  function onDown(e) {
+    if (downInfo) return;                       // 多指/重复事件去重
+    if (overShown() || ui.thinking) return;
     e.preventDefault();
-    var dx = e.clientX - downInfo.x, dy = e.clientY - downInfo.y;
-    if (!downInfo.moved && (dx * dx + dy * dy) > 36) downInfo.moved = true;
-    if (downInfo.sq >= 0 && canPick(downInfo.sq) && !ui.thinking) {
-      downInfo.dragging = true;
-      var p = stageXY(e.clientX, e.clientY);
+    trackStart(e.clientX, e.clientY, e.pointerId);
+  }
+
+  function onTouchStart(e) {
+    if (downInfo) return;                       // 指针事件通道已处理
+    if (overShown() || ui.thinking) return;
+    if (e.touches && e.touches.length) {
+      e.preventDefault();
+      trackStart(e.touches[0].clientX, e.touches[0].clientY, null);
+    }
+  }
+
+  function moveUpdate(x, y) {
+    var dx = x - downInfo.x, dy = y - downInfo.y;
+    var thresh = Math.max(8, geo.cell * 0.3);
+    var dragging = (dx * dx + dy * dy) > thresh * thresh;
+    if (dragging && canPick(downInfo.sq)) {
+      var p = stageXY(x, y);
       ui.drag = { from: downInfo.sq, x: p.x, y: p.y };
       draw();
     } else if (ui.drag) {
-      var p2 = stageXY(e.clientX, e.clientY);
+      var p2 = stageXY(x, y);
       ui.drag.x = p2.x; ui.drag.y = p2.y;
       draw();
     }
   }
 
-  function onUp(e) {
+  function onMove(e) {
     if (!downInfo) return;
+    e.preventDefault();
+    moveUpdate(e.clientX, e.clientY);
+  }
+
+  function upResolve(x, y) {
     var d = downInfo;
     downInfo = null;
-    if (e.target !== canvas) return;
-    e.preventDefault();
-    try { canvas.releasePointerCapture(e.pointerId); } catch (err) {}
-
-    var p = stageXY(e.clientX, e.clientY);
-    var sq = s2l(p.x, p.y);
-
-    if (ui.drag) {
-      ui.drag.release = true;
-      var from = ui.drag.from;
-      ui.drag = null;
-      draw();
-      if (sq !== null && sq !== from) {
-        if (tryMove(from, sq, true)) return;
-        if (isOwnPiece(sq)) { select(sq); return; }
-      }
-      clearSelect();
-      return;
+    removeWinListeners();
+    lastUpAt = Date.now();
+    if (d.pid !== null && canvas.releasePointerCapture) {
+      try { canvas.releasePointerCapture(d.pid); } catch (err) {}
     }
 
-    // 点击（未拖动）
-    if (!d.moved && d.sq !== null) {
-      if (ui.thinking || overShown()) return;
+    var dist = Math.hypot(x - d.x, y - d.y);
+    var isTap = dist <= Math.max(8, geo.cell * 0.3);   // 按位移距离区分点按/拖拽
+    var p = stageXY(x, y);
+    var sq = s2l(p.x, p.y);
+
+    if (ui.drag) { ui.drag = null; draw(); }
+
+    if (isTap) {
+      // 点按：选中 / 走子
+      if (ui.thinking || overShown()) { clearSelect(); return; }
       if (ui.selected >= 0) {
         if (d.sq === ui.selected) { clearSelect(); return; }
         if (tryMove(ui.selected, d.sq, false)) return;
@@ -407,6 +444,52 @@
       } else {
         select(d.sq);
       }
+      return;
+    }
+
+    // 拖拽落子
+    var from = d.sq;
+    if (from === null) { clearSelect(); return; }
+    if (!ui.thinking && !overShown() && sq !== null && sq !== from) {
+      if (tryMove(from, sq, true)) return;
+      if (isOwnPiece(sq)) { select(sq); return; }
+    }
+    if (isOwnPiece(from)) { select(from); return; }
+    clearSelect();
+  }
+
+  function onUp(e) {
+    if (!downInfo) return;
+    upResolve(e.clientX, e.clientY);
+  }
+
+  function onTouch(e) {
+    if (!downInfo) return;
+    if (e.type === 'touchmove') {
+      e.preventDefault();
+      if (e.touches && e.touches.length) moveUpdate(e.touches[0].clientX, e.touches[0].clientY);
+    } else {
+      if (e.changedTouches && e.changedTouches.length)
+        upResolve(e.changedTouches[0].clientX, e.changedTouches[0].clientY);
+    }
+  }
+
+  var lastUpAt = 0;
+  // 最后兜底：指针/触摸通道都未生效时，click 仍可完成选子/走子
+  function onClick(e) {
+    if (Date.now() - lastUpAt < 600) return;    // 已由指针/触摸通道处理
+    if (overShown() || ui.thinking) return;
+    Sound.unlock();
+    var sq = s2l(stageXY(e.clientX, e.clientY).x, stageXY(e.clientX, e.clientY).y);
+    if (sq === null) return;
+    if (ui.selected >= 0) {
+      if (sq === ui.selected) { clearSelect(); return; }
+      ui.legalFrom = legalTargets(ui.selected);
+      if (tryMove(ui.selected, sq, false)) return;
+      if (isOwnPiece(sq)) { select(sq); return; }
+      clearSelect();
+    } else if (isOwnPiece(sq)) {
+      select(sq);
     }
   }
 
@@ -669,9 +752,8 @@
   /* ---------------- 挂接事件 ---------------- */
   function bind() {
     canvas.addEventListener('pointerdown', onDown);
-    canvas.addEventListener('pointermove', onMove);
-    canvas.addEventListener('pointerup', onUp);
-    canvas.addEventListener('pointercancel', onUp);
+    canvas.addEventListener('touchstart', onTouchStart, { passive: false });
+    canvas.addEventListener('click', onClick);
 
     var levels = document.querySelectorAll('#levels .lvl');
     for (var i = 0; i < levels.length; i++) {
@@ -745,6 +827,8 @@
         thinking: ui.thinking,
         level: ui.levelIdx,
         tick: window.__autoStep || 0,
+        err: window.__lastErr || null,
+        taps: window.__tapCount || 0,
         pieces: pieces.join(',')
       }
     });
@@ -789,6 +873,10 @@
   }
 
   function boot() {
+    window.addEventListener('error', function (ev) {
+      window.__lastErr = ev.message + ' @' + (ev.filename || '').split('/').pop() + ':' + ev.lineno;
+      publishDebug();
+    });
     var soundBtn = document.getElementById('btnSound');
     soundBtn.textContent = '音效 ' + (ui.soundOn ? '开' : '关');
     setLevel(ui.levelIdx);
@@ -805,9 +893,42 @@
         showResult({ result: 'checkmate', winner: RED });
       }, 800);
     }
+    if (/[?&]synctap=/i.test(location.search) && DEBUG) {
+      // 合成点按：synctap=64,67 表示依次点按 idx64、idx67（走真实监听器）
+      setTimeout(function () {
+        var m = location.search.match(/synctap=([0-9,;]+)/i);
+        if (!m) return;
+        var pairs = m[1].split(';');
+        var i = 0, phase = 0;
+        var iv = setInterval(function () {
+          if (ui.thinking) return;
+          if (i >= pairs.length) { clearInterval(iv); publishDebug(); return; }
+          var pr = pairs[i].split(',');
+          if (phase === 0) {
+            tapSquare(+pr[0]); phase = 1;
+            setTimeout(function () { phase = 2; }, 420);
+          } else if (phase === 2) {
+            tapSquare(+pr[1]); phase = 0; i++;
+            publishDebug();
+          }
+        }, 200);
+      }, 900);
+    }
     if (location.protocol.indexOf('http') === 0 && 'serviceWorker' in navigator) {
       navigator.serviceWorker.register('sw.js').catch(function () {});
     }
+  }
+
+  function tapSquare(sq) {
+    var r = (sq / 9) | 0, c = sq % 9;
+    var p = l2s(r, c);
+    var rect = canvas.getBoundingClientRect();
+    var opts = {
+      clientX: rect.left + p.x, clientY: rect.top + p.y,
+      pointerId: 7, bubbles: true, cancelable: true, pointerType: 'touch', isPrimary: true
+    };
+    canvas.dispatchEvent(new PointerEvent('pointerdown', opts));
+    canvas.dispatchEvent(new PointerEvent('pointerup', opts));
   }
 
   boot();
