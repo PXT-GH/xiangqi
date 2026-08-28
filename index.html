@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#1d2823">
+<meta name="color-scheme" content="dark">
+<meta name="format-detection" content="telephone=no">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="description" content="中国象棋人机对战：六档难度逐级递增，触屏对弈，适配荣耀等全面屏手机，可添加到主屏幕离线游玩">
+<title>中国象棋 · 人机对战</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="icons/icon-192.png">
+<link rel="stylesheet" href="style.css?v=13">
+</head>
+<body>
+<div id="app">
+  <header>
+    <div class="brand">
+      <h1>中国象棋</h1>
+      <span class="sub">人机对战 · 六档难度</span>
+    </div>
+    <div class="side-switch" id="sideSwitch">
+      <button id="btnSideRed" class="active">执红</button>
+      <button id="btnSideBlack">执黑</button>
+    </div>
+  </header>
+
+  <nav id="levels" aria-label="难度选择">
+    <button data-lv="0" class="lvl"><b>1</b><span>入门</span></button>
+    <button data-lv="1" class="lvl"><b>2</b><span>简单</span></button>
+    <button data-lv="2" class="lvl"><b>3</b><span>普通</span></button>
+    <button data-lv="3" class="lvl"><b>4</b><span>困难</span></button>
+    <button data-lv="4" class="lvl"><b>5</b><span>大师</span></button>
+    <button data-lv="5" class="lvl"><b>6</b><span>宗师</span></button>
+  </nav>
+
+  <section id="stage">
+    <canvas id="board"></canvas>
+  </section>
+
+  <div id="status"><span id="statusText">轮到你 · 红方</span><span id="thinkDot" class="hidden">…</span></div>
+
+  <footer>
+    <button id="btnUndo">悔棋</button>
+    <button id="btnHint">提示</button>
+    <button id="btnRestart">新开局</button>
+    <button id="btnSound">音效 开</button>
+  </footer>
+</div>
+
+<div id="overlay" hidden>
+  <div class="card">
+    <h2 id="resTitle">对局结束</h2>
+    <p id="resDesc"></p>
+    <div class="card-btns">
+      <button id="resAgain">再来一局</button>
+      <button id="resSwap">交换阵营</button>
+      <button id="resClose">复盘</button>
+    </div>
+  </div>
+</div>
+
+<script src="js/game.js?v=16"></script>
+<script src="js/ui.js?v=17"></script>
+</body>
+</html>

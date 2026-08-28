@@ -1,0 +1,214 @@
+/* ============================================================
+ * 中国象棋 · 手机端样式（荣耀 / 全面屏适配）
+ * 要点：
+ *   - dvh 单位 + safe-area-inset，适配荣耀折叠屏、挖孔屏、手势条
+ *   - 禁止缩放 / 双指缩放 / 下拉刷新 / 长按菜单
+ *   - viewport-fit=cover 由 HTML meta 提供
+ * ============================================================ */
+:root {
+  --bg: #1d2823;
+  --panel: #2a3731;
+  --edge: #3b4a42;
+  --accent: #e3a93b;
+  --accent2: #c78f2a;
+  --text: #eae3d2;
+  --sub: #93a29b;
+  --danger: #e0564a;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+    user-select: none; }
+
+/* hidden 属性必须优先生效（#overlay 等用了更高优先级的 display 规则） */
+[hidden] { display: none !important; }
+
+html, body {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  overscroll-behavior: none;
+  background: var(--bg);
+  font-family: system-ui, -apple-system, "PingFang SC", "HarmonyOS Sans SC", "Microsoft YaHei", sans-serif;
+  -webkit-text-size-adjust: 100%;
+}
+
+#app {
+  height: 100vh;               /* 兜底 */
+  height: 100dvh;              /* 动态视口：适配荣耀浏览器地址栏收起/展开 */
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding:
+    calc(env(safe-area-inset-top, 0px) + 8px)
+    max(10px, env(safe-area-inset-right, 0px))
+    calc(env(safe-area-inset-bottom, 0px) + 8px)
+    max(10px, env(safe-area-inset-left, 0px));
+  background:
+    radial-gradient(120% 90% at 50% 0%, #26332d 0%, var(--bg) 60%);
+  color: var(--text);
+}
+
+/* ---------- 头部 ---------- */
+header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  touch-action: manipulation;
+}
+.brand h1 {
+  font-size: 21px;
+  letter-spacing: 2px;
+  line-height: 1.2;
+}
+.brand .sub {
+  font-size: 11px;
+  color: var(--sub);
+  letter-spacing: 1px;
+}
+.side-switch {
+  display: flex;
+  background: var(--panel);
+  border: 1px solid var(--edge);
+  border-radius: 9px;
+  padding: 2px;
+  touch-action: manipulation;
+}
+.side-switch button {
+  border: 0;
+  background: transparent;
+  color: var(--sub);
+  font-size: 14px;
+  padding: 5px 14px;
+  border-radius: 7px;
+  min-height: 34px;
+}
+.side-switch button.active {
+  background: linear-gradient(180deg, var(--accent), var(--accent2));
+  color: #202a26;
+  font-weight: 700;
+}
+
+/* ---------- 难度选择 ---------- */
+#levels {
+  display: flex;
+  gap: 5px;
+  touch-action: manipulation;
+}
+.lvl {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  border: 1px solid var(--edge);
+  background: var(--panel);
+  border-radius: 9px;
+  padding: 5px 0 4px;
+  color: var(--sub);
+  min-height: 44px;
+}
+.lvl b { font-size: 13px; color: var(--text); }
+.lvl span { font-size: 11px; }
+.lvl.active {
+  background: linear-gradient(180deg, var(--accent), var(--accent2));
+  border-color: transparent;
+}
+.lvl.active b, .lvl.active span { color: #202a26; }
+
+/* ---------- 棋盘区 ---------- */
+#stage {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+#board {
+  display: block;
+  touch-action: none;          /* 关键：棋盘上禁止滚动/缩放手势 */
+}
+
+/* ---------- 状态栏 ---------- */
+#status {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 24px;
+  font-size: 14px;
+  color: var(--sub);
+  letter-spacing: 1px;
+}
+#status .check { color: var(--danger); font-weight: 700; }
+#thinkDot { animation: blink 0.9s infinite; font-size: 16px; color: var(--accent); }
+@keyframes blink { 50% { opacity: 0.2; } }
+.hidden { display: none !important; }
+
+/* ---------- 底部按钮 ---------- */
+footer {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 7px;
+  touch-action: manipulation;
+}
+footer button {
+  border: 1px solid var(--edge);
+  background: var(--panel);
+  color: var(--text);
+  font-size: 15px;
+  border-radius: 10px;
+  min-height: 46px;
+  letter-spacing: 2px;
+  touch-action: manipulation;
+}
+footer button:active { background: var(--edge); }
+
+/* ---------- 结算弹窗 ---------- */
+#overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(10, 14, 12, 0.62);
+  backdrop-filter: blur(2px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  z-index: 10;
+}
+.card {
+  width: min(340px, 86vw);
+  background: linear-gradient(180deg, #f6eeda, #efe3c6);
+  color: #3a2f1c;
+  border-radius: 16px;
+  padding: 22px 18px 16px;
+  text-align: center;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.4);
+}
+.card h2 { font-size: 22px; letter-spacing: 2px; margin-bottom: 8px; }
+.card p { font-size: 13px; color: #6b5a38; margin-bottom: 16px; line-height: 1.6; }
+.card-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.card-btns button {
+  border: 0;
+  border-radius: 10px;
+  padding: 11px 0;
+  font-size: 15px;
+  min-height: 44px;
+}
+#resAgain {
+  grid-column: 1 / -1;
+  background: linear-gradient(180deg, #e9b64c, #cf9a2f);
+  color: #2a2210;
+  font-weight: 700;
+}
+#resSwap {
+  background: #39463f;
+  color: #efe8d8;
+}
+#resClose {
+  background: #d9cdb2;
+  color: #4a3c22;
+}
