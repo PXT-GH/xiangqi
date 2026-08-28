@@ -121,13 +121,16 @@
     roundRect(ox - cell * 0.55, oy - cell * 0.55, W + cell * 1.1, H + cell * 1.1, cell * 0.28);
     ctx.stroke();
 
-    // 网格线（黑色细线）
+    // 网格线（黑色细线；楚河汉界区域不留竖线）
     ctx.strokeStyle = 'rgba(38,33,26,0.92)';
     ctx.lineWidth = Math.max(1, cell * 0.035);
     for (var c = 0; c < 9; c++) {
+      var lx = ox + c * cell;
       ctx.beginPath();
-      ctx.moveTo(ox + c * cell, oy);
-      ctx.lineTo(ox + c * cell, oy + H);
+      ctx.moveTo(lx, oy);
+      ctx.lineTo(lx, oy + 4 * cell);
+      ctx.moveTo(lx, oy + 5 * cell);
+      ctx.lineTo(lx, oy + H);
       ctx.stroke();
     }
     for (var r = 0; r < 10; r++) {
