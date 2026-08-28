@@ -31,12 +31,22 @@ AI 内置开局库（中炮、仙人指路等常见开局应着），低档位�
 
 任选一种：
 
+0. **部署到 GitHub Pages（推荐，一劳永逸）**：
+   - 本项目是纯前端静态站，把仓库推送到 GitHub 后开 Pages 即可：
+     ```bash
+     gh repo create xiangqi --public --source . --push   # 或在网页上新建仓库后 git push
+     ```
+   - 网页方式：Settings → Pages → Source 选 `Deploy from a branch` → `main` → `/ (root)` → Save
+   - 部署完成后手机访问 `https://你的用户名.github.io/仓库名/`，用荣耀浏览器打开后
+     「菜单 → 添加到主屏幕」即可像 App 一样全屏使用，且支持离线游玩
+   - 项目中的 `server.js`、`test.js`、`ladder*.js`、`make-icons.js` 均为开发/测试用途，
+     GitHub Pages 只需要 `index.html`、`style.css`、`js/`、`manifest.webmanifest`、
+     `sw.js`、`icons/` 这些静态文件（已全部使用相对路径与相对 scope，部署到子路径也能正常工作）
 1. **直接发送文件**：把整个 `xiangqi` 文件夹打包成 zip，通过微信/QQ/华为分享发送到手机；解压后用「荣耀浏览器」直接打开 `index.html` 即可玩。
-2. **局域网访问（推荐，可直接添加主屏幕）**：
+2. **局域网访问**：
    - 电脑与手机连同一 Wi-Fi，电脑上运行 `node server.js`（需 Node.js）
    - 手机浏览器访问启动时打印的局域网地址 `http://电脑IP:8123`
    - 浏览器菜单 →「添加到主屏幕」，即可像 App 一样全屏打开，之后可离线游玩
-3. **开发者模式**：`adb reverse` / 手机近端推送静态目录亦可。
 
 ## 荣耀/全面屏适配说明
 
