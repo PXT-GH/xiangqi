@@ -1,5 +1,5 @@
 /* 中国象棋 · 离线缓存（添加到主屏幕后离线可玩） */
-var CACHE = 'xiangqi-v21';
+var CACHE = 'xiangqi-v22';
 var ASSETS = [
   './',
   './index.html',

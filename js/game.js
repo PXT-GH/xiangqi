@@ -531,14 +531,14 @@ function keyOf(s) {
     if (stand >= beta) return beta;
     if (stand > alpha) alpha = stand;
 
-    // 吃子优先，其次“将军延伸”（让对手必应的着法也进入静态搜索，
-    // 使牵制、杀棋等战术在浅层也能被正确评估）
+    // 吃子优先，其次“将军延伸”（仅静态搜索浅层启用：战术价值集中在前几步，
+    // 深层探测成本高收益低，会拖慢整体深度）
     var caps = [], chk = [];
     var otherSide = s.side === RED ? BLACK : RED;
     for (var i = 0; i < moves.length; i++) {
       var mv = moves[i];
       if (mv.captured) caps.push(mv);
-      else {
+      else if (qd <= 1) {
         make(s, mv, false);
         if (isAttacked(s.board, otherSide, s.kg[otherSide])) chk.push(mv);
         unmake(s, mv, false);
@@ -625,12 +625,12 @@ function keyOf(s) {
 
   /* ---------------- 六档难度 ---------------- */
   var LEVELS = [
-    { name: '入门', maxDepth: 1, time: 0.10, margin: 0, qsearch: false, random: true },
-    { name: '简单', maxDepth: 2, time: 0.30, margin: 60, qsearch: false, random: false },
-    { name: '普通', maxDepth: 3, time: 0.70, margin: 30, qsearch: false, random: false },
-    { name: '困难', maxDepth: 4, time: 1.60, margin: 12, qsearch: false, random: false },
-    { name: '大师', maxDepth: 5, time: 3.50, margin: 4, qsearch: true, random: false },
-    { name: '宗师', maxDepth: 6, time: 5.00, margin: 0, qsearch: true, random: false }
+    { name: '入门', maxDepth: 2, time: 0.35, margin: 60, qsearch: false, random: false },
+    { name: '简单', maxDepth: 3, time: 0.70, margin: 30, qsearch: false, random: false },
+    { name: '普通', maxDepth: 4, time: 1.60, margin: 12, qsearch: false, random: false },
+    { name: '困难', maxDepth: 5, time: 3.50, margin: 4, qsearch: true, random: false },
+    { name: '大师', maxDepth: 6, time: 5.00, margin: 0, qsearch: true, random: false },
+    { name: '宗师', maxDepth: 7, time: 8.00, margin: 0, qsearch: true, random: false }
   ];
 
   /* ---------------- AI 决策入口 ---------------- */

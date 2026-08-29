@@ -299,17 +299,18 @@ console.log('\n== AI ==');
       console.error('    难度倒挂(深度/时间): 档' + i, JSON.stringify(a), '→', JSON.stringify(b));
     }
   }
-  // margin（随机性）自简单档起严格递减；入门档为随机档不使用 margin
-  for (let i = 2; i < LEVELS.length; i++) {
+  // margin（随机性）全程严格递减（全体难度上移后入门也使用 margin）
+  for (let i = 1; i < LEVELS.length; i++) {
     if (LEVELS[i].margin > LEVELS[i - 1].margin) {
       mono = false;
       console.error('    难度倒挂(随机性 margin): 档' + (i + 1), LEVELS[i].margin, '>', LEVELS[i - 1].margin);
     }
   }
   ok(mono, '六档难度 maxDepth/time 严格递增、随机 margin 逐档递减');
-  ok(LEVELS[0].random, '入门档为随机档');
-  ok(LEVELS[1].margin >= 40, '简单档保留明显随机性（margin≥40）');
-  ok(!LEVELS[2].qsearch && LEVELS[4].qsearch && LEVELS[5].qsearch, '静态搜索仅用于大师/宗师档');
+  ok(!LEVELS[0].random && LEVELS[0].maxDepth >= 2, '入门档为 2 层搜索（全体难度已上移两档）');
+  ok(LEVELS[0].margin >= 40, '入门档保留较明显随机性（margin≥40）');
+  ok(LEVELS[3].qsearch && LEVELS[4].qsearch && LEVELS[5].qsearch, '静态搜索用于困难/大师/宗师档');
+  ok(LEVELS[5].maxDepth >= 7, '宗师档 7 层搜索');
 
   const cfgSmall = [
     { name: '入门', maxDepth: 1, time: 0.05, margin: 0, qsearch: false, random: true },
@@ -356,7 +357,7 @@ console.log('\n== AI ==');
   const mv = X.searchBest(g, X.LEVELS[5]);
   const dt = Date.now() - t0;
   ok(mv && moveSet(g).has(mv.f + '>' + mv.t), '宗师档全速返回合法走法');
-  ok(dt < 6500, '宗师档耗时 < 6.5s（实测 ' + (dt / 1000).toFixed(1) + 's）');
+  ok(dt < 9500, '宗师档耗时 < 9.5s（实测 ' + (dt / 1000).toFixed(1) + 's）');
   console.log('    宗师档实测耗时 ' + (dt / 1000).toFixed(2) + 's');
 
   // AI 全对局：低档对中档（缩减版），必须正常终局且全程合法
